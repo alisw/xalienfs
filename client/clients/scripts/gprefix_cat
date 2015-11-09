@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+my $PROGNAME = "GPREFIX_cat";
+my $mode = $ENV{'GPREFIX_MODE'};
+
+if (!$mode) {
+    $mode = "LOCAL";
+} else {
+    $PROGNAME = "cat";
+}
+
+if ($ENV{LOCALCAT} =~ /cat/) {
+    $CAT=$ENV{LOCALCAT};
+} else {
+    $CAT="cat";
+}
+
+my $src={};
+
+$src->{path} = shift or print STDERR "usage: $PROGNAME <filename>\n" and exit -4;
+$src->{name} = $src->{path};
+
+if ($src->{path} =~ /file:/) {
+    $src->{name} =~ s/file\://g;
+    $src->{mode} = "LOCAL";
+    $src->{protocol} = "file:";
+} else {
+    if ($src->{path} =~ /GPREFIX:/) {
+        $src->{name} =~ s/GPREFIX://g;
+        $src->{mode} = "GRID";
+        $src->{protocol} = "GPREFIX:";
+    } else {
+        if ($mode eq "LOCAL") {
+            $src->{name} = $src->{path};
+            $src->{mode} = "LOCAL";
+            $src->{protocol} = "file:";
+
+        } else {
+            if ($mode eq "GRID") {
+                $src->{name} = $src->{path};
+                $src->{mode} = "GRID";
+                $src->{protocol} = "GPREFIX:";
+            } else {
+                print "${PROGNAME}: illegal mode set - exit!\n";
+                exit(-6);
+            }
+        }
+    }
+}
+
+my $localfile = "/tmp/" . rand() . time() . ".GPREFIX_cat";
+
+my $result;
+
+if ($src->{mode} eq "GRID") {
+    $result=system("\$GSHELL_ROOT/bin/GPREFIX_cp -s $src->{name} file:$localfile");
+    if (! $result ) {
+        $result=system("$CAT $localfile");
+	my $ul = unlink $localfile;
+	if (!$ul) {
+	    print STDERR "error: could not remove the local stage file $localfile - remove it yourself!\n";
+	    exit(-10);
+	}
+    }
+    if ($result) {
+	print STDERR "error: couldn't get the file $src->{name}\n";
+	exit(1);
+    }
+} else {
+    if ( -r $src->{name} ) {
+	system("$CAT $src->{name}");
+    } else {
+	print STDERR "error: the file $src->{name} is not readable!\n";
+	exit(1);
+    }
+}
+
+
+
+
+

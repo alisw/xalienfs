@@ -1,0 +1,114 @@
+Changes to the OSG certificates package:
+
+NOTE: This CHANGES file lists changes made to the CACert package
+provided by the OSG security group, and hosted by the OSG GOC.
+
+If you are looking for previous listing of CHANGES that were made by
+the VDT, then please refer to this link:
+   http://vdt.cs.wisc.edu/releases/certs/ca_changes.txt
+
+===== Version 1.9 ====================
+Released 28-Jul-2009
+
+Updated to IGTF 1.31:
+  * Removed expired root certificate for BEGrid (03aa0ecb) (BE)
+  * Removed expired and discontinued User and Server issuing CAs
+    for DFN (fe102e03 and 34f8e29c) (DE)
+
+===== Version 1.8 ====================
+Released 1-Jul-2009
+
+Removed obsolete expiring CAs:
+  * DFN-Verein User CA Grid - G01, hash 34f8e29c
+  * DFN-Verein Server CA Grid - G01, hash fe102e03
+
+===== Version 1.7 ====================
+Released 3-Jun-2009
+
+Updated to IGTF 1.30:
+  * Updated contact meta-data for BYGCA, hash 709bed08 (BY)
+  * Updated URLs for DFN Grid PKI public web pages (DE)
+  * Added accredited NCSA GridShib SLCS CA (US)
+  * Added accredited DFN SLCS CA (DE)
+  * Added accredited TACC MICS CA (US)
+  * Added accredited SWITCH (QuoVadis anchored) CAs (CH)
+  * Added accredited FNAL-SLCS CA (US)
+
+===== Version 1.6 ====================
+Released 5-May-2009
+
+Updated to IGTF 1.29:
+  * Restored NGO-Netrust CA with hash d1737728 (SG)
+  * Updated AIST Grid (CRL) URL metadata (JP)
+  * Added accredited MD-Grid CA with hash 9ff26ea4 (MD)
+  * Added accredited HKU Grid CA with hash 4798da47 (HK)
+  * Updated signing policy file of APAC Grid CA (AU)
+  * Added accredited classic BYGCA (Belarus) with hash 709bed08 (BY)
+  * Updated namespace for the APAC CA (AU, NZ)
+
+===== Version 1.5 ====================
+Released 10-Mar-2009
+
+Updated to IGTF 1.28:
+  * Added accredited classic ULAGrid CA (VE)
+  * Added accredited TACC Root and TACC Classic CAs (US)
+  * Updated NERSC CRL URL download location (US)
+  * Updated DOEGrids CRL URL download location (US)
+  * Extended life time of NorduGrid CA (1f0e8352) (DK,SE,NO,FI,IS)
+  * Added SigmaNet CALG CA (LV)
+  * Updated AEGIS CA root certificate to reflect TLD name change (RS)
+  * Added CRL for SWITCH-SLCS issuing CA (304cf809) (CH)
+
+Removed unaccredited CAs:
+  * PSC Kerberos CA (290a3b29)
+  * PSC Root CA (9b88e95b)
+  * PSC Hosts CA (acc06fda)
+  * SDSC (3deda549)
+  * NPACI (b89793e4)
+  * TACC (9a1da9f9)
+  * old NCSA CA (4a6cd8b1) 
+
+===== Version 1.4 ====================
+Released 3-Feb-2009
+
+Updated to IGTF 1.27
+  * Corrected signing namespace for BEGrid2008 CA (e8d818e6)
+  * Added NERSC SLCS CA (b93d6240)
+  * ASGCCA-2007 changed signature algorithm from MD5 to SHA1 (9cd75e87)
+  * Added new CNRS2 hierarchy: CNRS2 (163af95c) -> CNRS2-Projets
+    (09ff08b7) -> CNRS2-Grid-FR (d11f973e)
+  * Updated IUCC root certificate (6fee79b0)
+  * Removed EstonianGrid CA (566bf40f)
+
+===== Version 1.3 ====================
+Released 15-Dec-2008
+
+Updated to IGTF 1.26
+  * Added accredited classic Indian Grid CA (da75f6a8)
+  * Updated IUCC root certificate with extended life time (6fee79b0)
+  * Updated BEGrid  and UCSD-PRAGMA URL metadata 
+  * New BEGrid2008 root certificate (e8d818e6)
+  * Extended life time of the SEE-GRID CA (468d15b3)
+  * Included CRL for NCSA SLCS CA (f2e89fe3)
+  * Temporally suspended NGO-Netrust CA (d1737728)
+
+===== Version 1.2 ====================
+Released 9-Dec-2008
+  - Removed expired PK-Grid certificate (d2a353a5),
+    superseded by PK-Grid-2007 CA (f5ead794)
+
+===== Version 1.1 ====================
+Released 29-Sep-2008
+  - based on IGTF 1.25
+  - added Taiwan NCHC
+
+===== Initial version: 1.0 ===== 
+NOTE: This initial GOC hosted release is based on the VDT v39 CA
+Certificate distribution, with the following changes.
+
+Please note that the VDT and OSG GOC certificates are now
+independently distributed and versioned.
+
+Released on 3-Sep-2008
+  - Updated to new Fermilab KCA CA certificate (e1fce4e9.0)
+  - Removed doegrids/grid-cert-request and associated files

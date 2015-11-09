@@ -1,0 +1,2 @@
+#!/bin/sh
+$GSHELL_ROOT/bin/gbbox packman list

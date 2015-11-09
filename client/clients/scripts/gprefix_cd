@@ -1,0 +1,22 @@
+if [ x$2 = "x-" ];then
+	if [ x$GPREFIX_OLDPWD = "x" ];then
+		gbbox cd 
+	else 
+		gbbox cd $GPREFIX_OLDPWD
+	fi
+else
+	gbbox cd $2
+fi
+rval=$?
+export GPREFIX_OLDPWD=$GPREFIX_PWD
+export GPREFIX_PWD=`/bin/cat ${GBBOX_ENVFILE} 2>/dev/null`
+if [ x$GPREFIX_MODE = "xGRID" ]; then 
+	test -z $GSHELL_SILENT && test $GSHELL_COLOR && export PS1="\e[31;47;2maliensh\e[49;34m:[$alien_API_VO] [\#] \e[49;31;4m${alien_PWD} >\e[0m";
+	test -z $GSHELL_SILENT && test -z $GSHELL_COLOR && export PS1="aliensh:[$alien_API_VO] [\#] ${alien_PWD} >";
+	test $GSHELL_SILENT && export PS1=""
+else 
+	export PS1="[\h] \w >";
+fi
+return $rval
+
+

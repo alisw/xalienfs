@@ -1,0 +1,1019 @@
+#!/usr/bin/perl
+use Getopt::Std;
+use File::Basename;
+
+
+my $PROGNAME = "alien_cp";
+my $APITIMEOUT = 10;
+my $trace = 0;
+my $mode = $ENV{'alien_MODE'};
+
+my $writeattempts = 0;
+my $maxwriteattempts = 5;
+
+if (!$mode) {
+    $mode = "LOCAL";
+} else {
+    $PROGNAME = "cp";
+}
+
+my %options=();
+getopts("fhovmnsdt:i:",\%options);
+@_ = @ARGV;
+
+my $Interrupted = 0; 
+$SIG{INT} = 'Interrupted';
+
+sub Interrupted {
+    $Interrupted++;
+    syswrite(STDERR, "Command Interrupted\n", 20);
+    exit(200);
+}
+
+# since in the restricted aliensh we don't have the which command, we have to get it via an environemnt variable
+if ($ENV{LOCALWHICH} =~ /which/)  {
+    $WHICH=$ENV{LOCALWHICH};
+} else {
+    $WHICH="which";
+}
+
+if ($ENV{LOCALCAT} =~ /cat/) {
+    $CAT=$ENV{LOCALCAT};
+} else {
+    $CAT="cat";
+}
+
+if ($ENV{LOCALGREP} =~ /grep/) { 
+    $GREP=$ENV{LOCALGREP};
+} else {
+    $GREP="grep";
+}
+
+if ($ENV{LOCALAWK} =~ /awk/) { 
+    $AWK=$ENV{LOCALAWK};
+} else {
+    $AWK="awk";
+}
+
+if ($ENV{LOCALLS} =~ /ls/) {
+    $LS=$ENV{LOCALLS};
+} else {
+    $LS="ls";
+}
+
+if ($ENV{LOCALMKDIR} =~ /mkdir/) {
+    $MKDIR=$ENV{LOCALMKDIR};
+} else {
+    $MKDIR="mkdir";
+}
+
+if ($ENV{LOCALRMDIR} =~ /rmdir/) {
+    $RMDIR=$ENV{LOCALRMDIR};
+} else {
+    $RMDIR="rmdir";
+}
+
+if ($ENV{LOCALMV} =~ /mv/) {
+    $MV=$ENV{LOCALMV};
+} else {
+    $MV="mv";
+}
+
+if ($ENV{LOCALUNZIP} =~ /unzip/) {
+    $UNZIP=$ENV{LOCALUNZIP};
+} else {
+    $UNZIP="unzip";
+}
+
+if ($ENV{LOCALXCP} =~ /xcp/) {
+    $XCP=$ENV{LOCALXCP};
+} else {
+    $XCP="xcp";
+}
+
+if ($ENV{LOCALXRDCP} =~ /xrdcp/) {
+    $XRDCP=$ENV{LOCALXRDCP};
+} else {
+    $XRDCP="xrdcp";
+}
+
+if ($ENV{LOCALMD5SUM} =~ /md5sum/) {
+    $MD5SUM=$ENV{LOCALMD5SUM};
+} else {
+    $MD5SUM="md5sum";
+}
+
+# check the needed binaries
+my $gbboxbin=`$WHICH $ENV{GSHELL_ROOT}/bin/gbbox 2> /dev/null`;
+my $xcpbin=`$WHICH $XCP 2> /dev/null`;
+my $xrdcpbin=`$WHICH $XRDCP 2> /dev/null`;
+my $xrdcpapmonbin=`$WHICH xrdcpapmon 2> /dev/null`;
+
+if ($gbboxbin eq "") {
+    print STDERR "error: gbbox binary not found in your path!\n";
+}
+
+if ($xcpbin eq "" and $xrdcpbin eq "" and $xrdcpapmonbin eq "") {
+    # try to find it in the GSHELL_ROOT directory
+    $xcpbin=`$WHICH $ENV{GSHELL_ROOT}/bin/xcp 2> /dev/null`;
+    $xrdcpbin=`$WHICH $ENV{GSHELL_ROOT}/bin/xrdcp 2> /dev/null`;
+    $xrdcpapmonbin=`$WHICH $ENV{GSHELL_ROOT}/bin/xrdcpapmon 2> /dev/null`;
+
+    if ($xcpbin eq "" and $xrdcpbin eq "" and $xrdcpapmonbin eq "") {
+	# try to find it one level up 
+	$xcpbin=`$WHICH $ENV{GSHELL_ROOT}/../bin/xcp 2> /dev/null`;
+	$xrdcpbin=`$WHICH $ENV{GSHELL_ROOT}/../bin/xrdcp 2> /dev/null`;
+	$xrdcpapmonbin=`$WHICH $ENV{GSHELL_ROOT}/../bin/xrdcpapmon 2> /dev/null`;
+	if ($xcpbin eq "" and $xrdcpbin eq "" and $xrdcpapmonbin eq "" ) {
+	    print STDERR "error: you have neither xcp or xrdcp nor xrdcpapmon in your path!\n";
+	    exit(-3);
+	}
+    }
+}
+
+chomp $gbboxbin;
+chomp $xcpbin;
+chomp $xrdcpbin;
+chomp $xrdcpapmonbin;
+
+my $usexrdcp=0;
+
+if ($xrdcpbin ne "") {
+    $usexrdcp = 1;
+}
+
+if ($xrdcpapmonbin ne "") {
+    $usexrdcp = 1;
+    $xrdcpbin = $xrdcpapmonbin;
+}
+
+# we need to add the path of  the corresponding xrdcp library in front
+my $xrdcpdir = dirname $xrdcpbin;
+
+if ($options{h}) {
+    usage();
+    exit(0); 
+}
+
+my $src={};
+my $dst={}; 
+
+my $verbose;
+my $silent;
+my $force="-f";
+my $newversion;
+
+if ($options{v}) {
+    $verbose = "-v";
+}
+
+if ($options{s}) {
+    $silent = "-s";
+}
+if ($options{n}) {
+    $newversion = 1;
+}
+
+if ($options{d}) {
+    $trace=1;
+}
+
+if ($options{t}) {
+    $APITIMEOUT = $options{t};
+}
+
+$src->{path} = shift(@_);
+$dst->{path} = shift(@_);
+$src->{arg} = $src->{path};
+$dst->{arg} = $dst->{path};
+$src->{md5} = "00000000000000000000000000000000";
+$dst->{md5} = "00000000000000000000000000000000";
+$src->{anchor} = "";
+$dst->{QOS} = 0;
+$dst->{QOSCOUNT} = 0;
+$dst->{cnt} = 0;
+$dst->{size} = 0;
+
+my ($sp,$sse) = split('@',"$src->{path}");
+my ($dp,$dse) = split('@',"$dst->{path}");
+
+if ($sse) {
+    $src->{se} = $sse;
+    $src->{seadd} = "@" . $sse;
+    $src->{path} = $sp;
+} else {	
+    $src->{se} = 0;
+    $src->{seadd} = "";
+}
+
+
+if ($dse) {
+    if ( ( $dse =~ /tape=(\d*)/ )) {
+	$dst->{QOS} = "tape";
+	$dst->{QOSCOUNT} = $1;
+	$dst->{se} = 0;
+    } else {
+	if ( ( $dse =~ /disk=(\d*)/ )) {
+	    $dst->{QOS} = "disk";
+	    $dst->{QOSCOUNT} = $1;
+	    $dst->{se} = 0;
+	} else {
+	    $dst->{se} = $dse;
+	}
+    }
+    $dst->{seadd} = "@" . $dse;
+    $dst->{path} = $dp;
+} else {
+    $dst->{se} = 0;
+    $dst->{seadd} = "";
+}
+
+
+$trace and print "|==> QOS: $dst->{QOS}=$dst->{QOSCOUNT}\n";
+
+#print "$src->{path} [$src->{se}] $dst->{path} [$dst->{se}]\n";
+if ( ($src->{path} eq "") ) {
+    print STDERR "error: ($PROGNAME) you have to specify the source path!\n";
+    usage();
+    exit(-5);
+}
+
+if ( ($dst->{path} eq "") ) {
+    print STDERR "error: ($PROGNAME) you have to specify the destination path!\n";
+    usage();
+    exit(-4);
+}
+
+
+$trace and print "|==> Trace : Copying $src->{path} => $dst->{path}\n";
+
+$src->{name} = $src->{path};
+$dst->{name} = $dst->{path};
+
+if ($src->{path} =~ /file:/) {
+    $src->{name} =~ s/file\://g;
+    $src->{mode} = "LOCAL";
+    $src->{protocol} = "file:";
+} else {
+    if ($src->{path} =~ /alien:/) {
+	$src->{name} =~ s/alien://g;
+	$src->{mode} = "GRID";	
+	$src->{protocol} = "alien:";
+    } else {
+	if ($mode eq "LOCAL") {
+	    $src->{name} = $src->{path};
+	    $src->{mode} = "LOCAL";
+	    $src->{protocol} = "file:";
+ 
+	} else {
+	    if ($mode eq "GRID") {
+		$src->{name} = $src->{path};
+		$src->{mode} = "GRID";
+		$src->{protocol} = "alien:";
+	    } else {
+		print "${PROGNAME}: illegal mode set - exit!\n";
+		exit(-6);
+	    }
+	}
+    }
+}
+
+if ($dst->{path} =~ /file:/) {
+    $dst->{name} =~ s/file\://g;
+    $dst->{mode} = "LOCAL";
+    $dst->{protocol} = "file:";
+} else {
+    if ($dst->{path} =~ /alien:/) {
+	$dst->{name} =~ s/alien://g;
+	$dst->{mode} = "GRID";
+	$dst->{protocol} = "alien:";
+    } else {
+	if ($mode eq "LOCAL") {
+	    $dst->{name} = $dst->{path};
+	    $dst->{mode} = "LOCAL";
+	    $dst->{protocol} = "file:";
+	} else {
+	    if ($mode eq "GRID") {
+		$dst->{name} = $dst->{path};
+		$dst->{mode} = "GRID";
+		$dst->{protocol} = "alien:";
+	    } else {
+		print STDERR  "${PROGNAME}: illegal mode set - exit!\n";
+		exit(-6);
+	    }
+	}
+    }
+}
+
+if ( ($src->{name} eq ".") || ($src->{name} eq "./") ) {
+    $src->{name} = "";
+}
+
+if ( ($dst->{name} eq ".") || ($dst->{name} eq "./") ) {
+    $dst->{name} = "";
+}
+
+if ($src->{mode} eq "LOCAL") {
+    if (!($src->{name} =~ /^\// )) {
+	$src->{name} = "$ENV{'PWD'}/$src->{name}";
+	$src->{name} =~ s/\/\//\//g;
+    }
+}
+
+if ($src->{mode} eq "GRID") {
+    if (!($src->{name} =~ /^\//)) {
+	$src->{name} = "$ENV{'alien_PWD'}/$src->{name}";
+	$src->{name} =~ s/\/\//\//g;
+    }
+}
+
+if ($dst->{mode} eq "LOCAL") {
+    if (!($dst->{name} =~ /^\//)) {
+	$dst->{name} = "$ENV{'PWD'}/$dst->{name}";
+	$dst->{name} =~ s/\/\//\//g;
+    }
+}
+
+if ($dst->{mode} eq "GRID") {
+    if (!($dst->{name} =~ /^\//)) {
+	$dst->{name} = "$ENV{'alien_PWD'}/$dst->{name}";
+	$dst->{name} =~ s/\/\//\//g;
+    }
+}
+
+if ($src->{name} =~ /\/$/) {
+    chop $src->{name};
+}
+
+if ($dst->{name} =~ /\/$/) {
+    if ($dst->{name} ne "/") {
+	chop $dst->{name};
+    }
+}
+
+if (defined $src->{name} && ($src->{name} ne "")) {
+    $src->{bname} = basename "$src->{name}";
+    $src->{dname} = dirname  "$src->{name}";
+}
+
+if (defined $dst->{name} && ($dst->{name} ne "")) {
+    $dst->{bname} = basename "$dst->{name}";
+    $dst->{dname} = dirname  "$dst->{name}";
+}
+
+$trace and print "|==> Trace : Copying $src->{name} [$src->{mode}] => $dst->{name} [$dst->{mode}]\n";
+
+$src->{isdir} = 0;
+
+my $sesel = 0;
+my $maxsesel = 0;
+my $seexclude = "IGNORE;";
+
+# check if the source is a directory
+if ($src->{mode} eq "GRID") {
+    $trace and print "|==> Trace : $gbboxbin ls -F $src->{name}/../ | $GREP $src->{bname}/\$ | $GREP -v \"\.$src->{bname}\"\n";
+    my $sourcename = `$gbboxbin ls -F $src->{name}/../ | $GREP $src->{bname}/\$ | $GREP -v "\.$src->{bname}" ` ;
+    $trace and print "|==> Trace : Checking if $src->{name} is a directory => $sourcename\n"; 
+    if ( $sourcename =~ /\/$/ ) {
+	# this is a directory!
+	$trace and print "|==> Trace : Source is a directory\n";
+	$src->{isdir} = 1;
+    }
+} else {
+    if ( -d $src->{name} ) {
+	# this is a directory!
+	$trace and print "|==> Trace : Source is a directory\n";
+	$src->{isdir} = 1;
+    }
+}
+
+# check, if the destination is a directory
+if ($dst->{mode} eq "GRID") {
+    $trace and print "|==> Trace : $gbboxbin ls -F $dst->{name}/../ | $GREP $dst->{bname}/\$ | $GREP -v \"\.$dst->{bname}\"\n";
+    my $destinationname = `$gbboxbin ls -F $dst->{name}/../ | $GREP $dst->{bname}/\$ | $GREP -v "\.$dst->{bname}" `;
+    $trace and print "|==> Trace : Checking if $dst->{name} is a directory => $destinationname\n"; 
+    if ( $destinationname =~ /\/$/ ) {
+	# this is a directory!
+	$dst->{isdir} = 1; 
+	$trace and print "|==> Trace : Destination is a directory\n";
+    }
+} else {
+    if ( -d $dst->{name} ) {
+	# this is a directory!
+	$dst->{isdir} = 1;
+	$trace and print "|==> Trace : Destination is a directory\n";
+    }
+}
+
+# if the source is a directory, we can copy only to a destination directory
+if ($src->{isdir}) {
+    if (!$dst->{isdir})  {
+	print STDERR "error: When copying multiple files, you have to specify a destination directory!\n";
+	exit(23);    
+    } else {
+	# we have to create the destination directory and copy all source files
+	if ($dst->{mode} eq "GRID") {
+	    $trace and print "|==> Trace : Creating alien destination directory $dst->{name}/$src->{bname}\n";	    my $mk_dir = system("$gbboxbin mkdir -p $dst->{name}/$src->{bname}");
+	    if ( $mk_dir) {
+		print STDERR "error: Cannot create destination directory $dst->{name}/$src->{bname} for multiple file copy!\n";
+		exit(24);
+	    }
+	} else {
+	    $trace and print "|==> Trace : Creating local destination directory $dst->{name}/$src->{bname}\n";
+	    my $mk_dir = system("$MKDIR -p $dst->{name}/$src->{bname}");
+	    if ( $mk_dir) {
+		print STDERR "error: Cannot create destination directory $dst->{name}/$src->{bname} for multiple file copy!\n";
+		exit(24);
+	    }
+	}
+	
+	my $result=0;
+	# list the matching source files
+	if ($src->{mode} eq "GRID") {
+	    $trace and print "|==> Trace : Listing alien source directory $src->{name} !\n";
+	    open GLOB, "$gbboxbin -o name ls $src->{name}/| $AWK '{print \$1}'|";
+	} else {
+	    $trace and print "|==> Trace : Listing local source directory $src->{name} !\n";
+	    open GLOB, "$LS -1 $src->{name} |";
+	}
+	while (<GLOB>) {
+	    chomp $_;
+	    my $newoptions="";
+	    if ($options{n}) {
+		$newoptions .= "-n ";
+	    }
+	    if ($options{d}) {
+		$newoptions .= "-d ";
+	    }
+	    if ($options{v}) {
+		$newoptions .= "-v ";
+	    }
+	    if ($options{s}) {
+		$newoptions .= "-s ";
+	    }
+	    $trace and print "$ENV{GSHELL_ROOT}/bin/alien_cp $newoptions $src->{protocol}$src->{name}/$_$src->{seadd} $dst->{protocol}$dst->{path}/$src->{bname}$dst->{seadd}\n";
+	    $result += system("$ENV{GSHELL_ROOT}/bin/alien_cp $newoptions $src->{protocol}$src->{name}/$_$src->{seadd} $dst->{protocol}$dst->{path}/$src->{bname}$dst->{seadd}");
+	}
+	close GLOB;
+	exit $result;
+    }
+}
+
+# 
+
+# check for wildcards in the source name
+if ($src->{name} =~ /\*/) {
+    # check, that the destination is a directory
+    if (!( $dst->{isdir})) {
+	# this is not a directory!
+	print STDERR "error: When copying multiple files, you have to specify a destination directory!\n";
+	exit(23);
+    }
+
+    my $result=0;
+    $src->{bname} =~ s/\*//g;
+    if ($src->{bname} eq "" ) {
+	$src->{bname} = "[\w]\*";
+    }
+    # list the matching files
+    if ($src->{mode} eq "GRID") {
+	$trace and print "|==> Trace : Listing alien source directory $src->{dname} matching $src->{bname} with $GREP $AWK !\n";
+	open GLOB, "$gbboxbin -o name ls $src->{dname} | $GREP $src->{bname} | $AWK '{print \$1}'| ";
+    } else {
+	$trace and print "|==> Trace : Listing local source directory $src->{name} !\n";
+	open GLOB, "$LS -1 $src->{name} |";
+    }
+
+    while (<GLOB>) {
+	chomp $_;
+	if ($src->{mode} eq "LOCAL") {
+	    # alien does not return the full path like a local ls function does 
+	    $_ = basename $_;
+	} 
+	my $newoptions="";
+	if ($options{n}) {
+	    $newoptions .= "-n ";
+	}
+	if ($options{d}) {
+	    $newoptions .= "-d ";
+	}
+	if ($options{v}) {
+	    $newoptions .= "-v ";
+	}
+	if ($options{s}) {
+	    $newoptions .= "-s ";
+	}
+	$trace and print "$ENV{GSHELL_ROOT}/bin/alien_cp $newoptions $src->{protocol}$src->{dname}/$_$src->{seadd} $dst->{arg}\n";
+	$result += system("$ENV{GSHELL_ROOT}/bin/alien_cp $newoptions $src->{protocol}$src->{dname}/$_$src->{seadd} $dst->{arg}");
+    }
+    close GLOB;
+    exit $result;
+}
+
+my $rsrcpath;
+my $rdstpath;
+
+my $srcok=0;
+my $dstok=0;
+
+trynextreplica:
+
+$src->{envelope} = "";
+
+##############################################################################
+# src checking
+##############################################################################
+$trace and print "|==> Trace : Source checking \n";
+if ($src->{mode} eq "GRID") {
+    # get the access envelope for this file to read
+    $rsrcpath = "/tmp/.__env__" . rand() . rand();
+    $trace and print "|==> Trace : $gbboxbin -o se,url,md5,nSEs,envelope access read $src->{name} $src->{se} 0 \"$seexclude\" 0 \"$ENV{alien_CLOSEST_SITE}\" \n";
+    eval {
+        local $SIG{ALRM} = sub { die "alarm\n" };       # NB \n required
+        alarm $APITIMEOUT;
+	open ENV, "$gbboxbin -o se,url,md5,nSEs,envelope access read $src->{name} $src->{se} 0 \"$seexclude\" 0 \"$ENV{alien_CLOSEST_SITE}\" 2>&1 |";
+        alarm 0;
+    };
+    die if $@ && $@ ne "alarm\n";       # propagate errors
+    if ($@) {
+        # timed out
+	print STDERR "error: Timeout after $APITIMEOUT seconds requesting a file access to read $src->{name} $src->{se}\n";
+	exit 22;
+    }
+
+    $trace and print "|==> Trace : gbbox finished \n";
+    my $first = 1;
+    while (<ENV>) {
+	$trace and print "$_";
+	if ($first) {
+	    my ($se,$url,$md5,$nses,$rest) = split ("   ",$_,5);
+	    $src->{turl} = $url;
+	    if (!($url =~ /root:/ )) {
+		$srcok=0;
+		last;
+	    }
+	    # remove the anchor from this url, if there is one
+	    if ($src->{turl} =~ /\#/) {
+		$src->{turl} =~ /([^\#]*)\#([^\#]*)/;
+		$src->{turl}   = $1;
+		$src->{anchor} = $2;
+	    }
+
+	    $maxsesel = $nses;
+	    $src->{se} = $se;
+            $src->{md5} = $md5;
+	    $src->{envelope} .= "$rest";
+
+	    $first=0;
+	} else {
+	    $srcok=1;
+	    if (! ($_ =~ /^\ \ \ /)) {
+		$src->{envelope} .= "$_";
+	    }
+	}
+    }
+    $trace and print "|==> Trace : loop finished \n";
+    if ($srcok) {
+	$seexclude .="$src->{se};";
+	$trace and print "|==> Trace : URL=$src->{turl}\n";
+	$trace and print "|==> Trace : Envelope $src->{envelope}\n";
+	$trace and print "|==> Trace : exclude next time: $seexclude\n";
+	$trace and print "|==> Trace : ==========================================================================================\n";
+	$trace and print "|==> Trace : ==========================================================================================\n";
+    }
+    close ENV;
+}
+
+if ($src->{mode} eq "LOCAL") {
+    if ( -r $src->{name}) {
+	$src->{turl} = $src->{name};
+	$srcok=1;
+    }
+}
+
+$trace and print "|==> Trace : Destination checking \n";
+
+$dst->{envelope} = "";
+
+##############################################################################
+# dst checking
+##############################################################################
+if ($dst->{mode} eq "GRID") {
+    # check if the destination is a directory
+    if ($dst->{isdir}) {
+	# this is a directory, so the destination name has to be extended by the source basename
+	if (!($dst->{name} =~ /\/$/)) {
+	    $dst->{name} .= "/";
+	}
+	$dst->{name} .= basename($src->{name});
+	$trace and print "|==> Trace: Destination was a directory -> rewriting destination name to $dst->{name}\n";
+    }
+
+    # get the access envelope for this file to write
+    $rdstpath = "/tmp/.__env__" . rand() . rand();
+    eval {
+        local $SIG{ALRM} = sub { die "alarm\n" };       # NB \n required
+        alarm $APITIMEOUT;
+	if ($newversion) {
+	    $src->{md5}=`$MD5SUM $src->{turl}  2>/dev/null | $AWK '{print \$1}'`;
+	    chomp $src->{md5};
+	    if ($src->{md5} eq "") {
+		$src->{md5} = "00000000000000000000000000000000";
+		print STDERR "warning: ($PROGNAME) cannot calculate the md5sum for $src->{turl}\n";
+	    }
+	    # check if the file exists and if the md5 is the same like the source
+	    $dst->{md5}=`$gbboxbin -o md5 ls -m $dst->{name} 2> /dev/null | $AWK '{print \$1}'`;
+	    chomp $dst->{md5};
+	    if ($dst->{md5} eq $src->{md5}) {
+		# no need to upload this file, they are identical
+		printf STDERR "warning: source and destination files are identical - no upload!\n";
+		exit(0);
+	    } 
+	    
+	    if ($dst->{md5} ne "") {
+		$trace and print "|==> Trace : $gbboxbin -o se,url,md5,pfn,envelope access write-version $dst->{name} $dst->{se} $dst->{size} \"$seexclude\" 0 $ENV{alien_CLOSEST_SITE} $dst->{QOS} $dst->{QOSCOUNT}\n";
+		open ENV, "$gbboxbin -o se,url,pfn,md5,envelope access write-version $dst->{name} $dst->{se} $dst->{size} \"$seexclude\" 0 $ENV{alien_CLOSEST_SITE} $dst->{QOS} $dst->{QOSCOUNT}2>&1 |";
+	    } else {
+		# the file does not exist yet
+		$trace and print "|==> Trace : $gbboxbin -o se,url,md5,pfn,envelope access write-once $dst->{name} $dst->{se} $dst->{size} \"$seexclude\" 0 $ENV{alien_CLOSEST_SITE} $dst->{QOS} $dst->{QOSCOUNT}\n";
+		open ENV, "$gbboxbin -o se,url,md5,pfn,envelope access write-once $dst->{name} $dst->{se} $dst->{size} \"$seexclude\" 0 $ENV{alien_CLOSEST_SITE} $dst->{QOS} $dst->{QOSCOUNT} 2>&1 |";
+	    }
+	} else {
+	    $trace and print "|==> Trace : $gbboxbin -o se,url,md5,pfn,envelope access write-once $dst->{name} $dst->{se} $dst->{size} \"$seexclude\" 0 $ENV{alien_CLOSEST_SITE} $dst->{QOS} $dst->{QOSCOUNT}\n";
+	    open ENV, "$gbboxbin -o se,url,md5,pfn,envelope access write-once $dst->{name} $dst->{se} $dst->{size} \"$seexclude\" 0 $ENV{alien_CLOSEST_SITE} $dst->{QOS} $dst->{QOSCOUNT} 2>&1 |";
+	}
+        alarm 0;
+    };
+    die if $@ && $@ ne "alarm\n";       # propagate errors
+    if ($@) {
+        # timed out
+	print STDERR "error: Timeout after $APITIMEOUT seconds requesting a file access to write $dst->{name} $dst->{se}\n";
+	exit 22;
+    }
+
+    my $first=1;
+    for ($i=0; $i< $dst->{cnt}; $i++) {
+	$dst->{$i}->{envelope} = "";
+    }
+    $dst->{cnt} = 0;
+    while (<ENV>) {
+	my $cnt = $dst->{cnt};
+
+	$trace and print "==> parsing $_ [ $dst->{cnt} $first\n";
+	if (!($_  =~ /[A-Za-z]/ )) { next; }
+	if ($first) {
+	    my ($se,$url,$md5,$pfn, $rest) = split ("   ",$_,5);
+	    if( !($url  =~ /^root:/)) {
+		$dstok=0;
+		last;
+	    }
+	    $dst->{$cnt}->{turl} = $url;
+	    $dst->{$cnt}->{se} = $se;
+	    $dst->{$cnt}->{md5} = $md5;
+	    $dst->{$cnt}->{pfn} = $pfn;
+	    $dst->{$cnt}->{envelope} .= "$rest";
+	    $first = 0;
+	    $dstok=1;
+	} else {
+	    $dstok=1;
+	    if (! ($_ =~ /^\ \ \ /)) {
+		$dst->{$cnt}->{envelope} .= "$_";
+	    }
+	    if ($_ =~ "-----END SEALED ENVELOPE-----") {
+		# last line of an envelope
+		$dst->{cnt}++;
+		$first=1;
+	    }
+	}
+    }
+
+    close ENV;
+    for (my $j=0; $j< $dst->{cnt}; $j++) {
+	$trace and printf "|==> Trace : SE %s Envelope $j = %s\n", $dst->{$j}->{se}, $dst->{$j}->{envelope};
+    }
+}
+
+
+if ($dst->{mode} eq "LOCAL") {
+    # check if the destination is a directory
+    if ($dst->{isdir}) {
+	# this is a directory, so the destination name has to be extended by the source basename
+	if (!($dst->{name} =~ /\/$/)) {
+	    $dst->{name} .= "/";
+	}
+	$dst->{name} .= basename($src->{name});
+	$trace and print "|==> Trace: Destination was a directory -> rewriting destination name to $dst->{name}\n";
+    }
+    my $basedir = dirname $dst->{name};
+    if ( -e $dst->{name}) {
+	if ( -w $dst->{name}) {
+	    $dst->{turl} = $dst->{name};
+	    $dstok=1;
+	}
+    } else {
+	if ( -x $basedir ) {
+	    $dst->{turl} = $dst->{name};
+	    $dstok=1;
+	}
+    }
+}
+
+$trace and print "|==> Trace : Prepared Access envelopes\n";
+my $failed=0;
+if ($srcok && $dstok) {
+    # copy ths stuff
+    unlink $dst->{name};
+    ###########################################################################
+    
+    # use xdrcp now
+    ###########################################################################
+    $trace and print "|==> Trace : Copying $src->{turl} => $dst->{turl}\n";
+    if ( ($src->{mode} eq "LOCAL") && ($dst->{mode} eq "GRID") ) {
+	for (my $j=0; $j< $dst->{cnt}; $j++) { 
+	    printf "=> Creating replica %d/$dst->{cnt} ...\n", $j+1; 
+#	    $trace and print "Creating replica $j ...\n";
+	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+		$atime,$mtime,$ctime,$blksize,$blocks)
+		= stat($src->{turl} );
+	    $dst->{size} = $size;
+	    $command = "$xrdcpbin $src->{turl} $dst->{$j}->{turl} -OD\\\&authz=\"$dst->{$j}->{envelope}\" $verbose $silent $force";
+
+	    if (run_command($command)) {
+		printf STDERR "error: ($PROGNAME) copy command failed \n";
+		$failed=1;
+		$seexclude .="$dst->{$j}->{se};";
+	    } else {
+		if (1) { # now we always calculate the md5 sum, if we write a file ... hmmm ?!?!
+#	    if ($options{m}) {
+		    # calculate md5 sum
+		    $src->{md5}=`$MD5SUM $src->{turl} 2>/dev/null | $AWK '{print \$1}'`;
+		    chomp $src->{md5};
+		    if ($src->{md5} eq "") {
+			$src->{md5} = "00000000000000000000000000000000";
+			print STDERR "warning: ($PROGNAME) cannot calculate the md5sum for $src->{turl}\n";
+		    }
+		}
+	    }
+	}
+    }
+    
+    if ( ($src->{mode} eq "GRID") && ($dst->{mode} eq "LOCAL") ) {
+	$command = "$xrdcpbin $src->{turl} $dst->{turl} -OS\\\&authz=\"$src->{envelope}\" $verbose $silent $force";
+
+	if (run_command($command)) {
+	    printf STDERR "error: ($PROGNAME) copy command failed\n";
+	    $failed=1;
+	} else {
+	    if (! -e $dst->{turl} ) {
+		printf STDERR "error: ($PROGNAME) copy command failed\n";
+		$failed=1;
+	    } else {
+		extract_zipfile($src->{turl},$src->{anchor}, $dst->{turl});
+	    }
+	}
+
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+	    $atime,$mtime,$ctime,$blksize,$blocks)
+	    = stat($dst->{turl} );
+	$dst->{size} = $size;
+	if ($options{m}) {
+	    # calculate md5 sum
+	    $dst->{md5}=`$MD5SUM $dst->{turl} 2>/dev/null | $AWK '{print \$1}'`;
+	    chomp $dst->{md5};
+	    if ($dst->{md5} eq "") {
+		$dst->{md5} = "00000000000000000000000000000000";
+		print STDERR "warning: ($PROGNAME) cannot calculate the md5sum for $src->{turl}\n";
+	    }
+	    # verify the md5 sum, if it is defined ne 0
+	    if ($src->{md5} ne "00000000000000000000000000000000") {
+		if ($src->{md5} ne $dst->{md5}) {
+		    print STDERR "error: ($PROGNAME) the md5sum registered and the one of the local file are different!\n";
+		    exit(30);
+		}
+	    }
+	}
+    }
+    
+    if ( ($src->{mode} eq "LOCAL") && ($dst->{mode} eq "LOCAL") ) {
+	$command = "cp $src->{turl} $dst->{turl}"; 
+	if (run_command($command)) {
+	    printf STDERR "error: ($PROGNAME) copy command failed\n";
+	    $failed=1;
+	} else {
+	    extract_zipfile($src->{turl},$src->{anchor},$dst->{turl});
+	}
+
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+	    $atime,$mtime,$ctime,$blksize,$blocks)
+	    = stat($dst->{turl} );
+	$dst->{size} = $size;
+    }
+    
+    if ( ($src->{mode} eq "GRID") && ($dst->{mode} eq "GRID") ) {
+	$tmppath = "/tmp/.__env__" . rand() . rand();    
+	$command = "$xrdcpbin $src->{turl} $tmppath -OS\\\&authz=\"$src->{envelope}\" $verbose $silent $force";
+
+	if (run_command($command)) {
+	    printf STDERR "error: ($PROGNAME) copy command failed\n";
+	    $failed=1;
+	} else {	    
+	    extract_zipfile($src->{turl},$src->{anchor},$dst->{turl});
+	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+		$atime,$mtime,$ctime,$blksize,$blocks)
+		= stat($tmppath);
+	    $dst->{size} = $size;
+	    if ($options{m}) {
+		# calculate md5 sum
+		$src->{md5}=`$MD5SUM $tmppath 2>/dev/null | $AWK '{print \$1}'`;
+		chomp $src->{md5};
+		if ($src->{md5} eq "") {
+		    $src->{md5} = "00000000000000000000000000000000";
+		print STDERR "warning: ($PROGNAME) cannot calculate the md5sum for $tmppath\n";
+		}
+	    }
+
+	    for (my $j=0; $j< $dst->{cnt}; $j++) { 
+		$command = "$xrdcpbin $tmppath $dst->{turl} -OD\\\&authz=\"$dst->{$j}->{envelope}\" $verbose $silent $force";
+
+		if (run_command($command)) {
+		    $seexclude .="$dst->{$j}->{se};";
+		    printf STDERR "error: ($PROGNAME) copy command failed for target SE $dst->{$j}->{se}\n";
+		    $failed=1;
+		}
+	    }
+	}
+    }
+    $trace and print "|==> Trace : Copied files\n";    
+
+    if (!$failed) {
+	# commit the destination envelope, if it was on the grid
+	if ($dst->{mode} eq "GRID") {
+	    $trace and print "|==> Trace : export GCLIENT_EXTRA_ARG=\"$dst->{0}->{envelope}\"; $gbboxbin commit $dst->{size} 0 0 0 0 0 0 $src->{md5}\n";
+	    open COMMIT , "export GCLIENT_EXTRA_ARG=\"$dst->{0}->{envelope}\"; $gbboxbin commit $dst->{size} 0 0 0 0 0 0 $src->{md5} 2>&1 |";
+	    while (<COMMIT>) {
+		if (($_ =~ /error/)) {
+		    printf STDERR "---------------------------------------------------------------------\n";
+		    print STDERR "error: ($PROGNAME) could not enter the lfn into the catalogue: $_!\n";
+		    printf STDERR "---------------------------------------------------------------------\n";
+		    $failed=1;
+		    last;
+		}
+	    }
+	    close COMMIT;
+	    $trace and print "Commited envelopes\n";    
+
+	    for (my $j=1; $j < $dst->{cnt}; $j++) {
+		$trace and print "|==> Trace : register additional replica in SE $dst->{$j}->{se}\n";
+		open REGISTER , "$gbboxbin addMirror $dst->{name} $dst->{$j}->{se} $dst->{$j}->{turl} 2>&1 |";
+		while (<REGISTER>) {
+		    if (($_ =~ /Error/)) {
+			printf STDERR "---------------------------------------------------------------------\n";
+			print STDERR "error: ($PROGNAME) could not add lfn mirror into the catalogue: $_!\n";
+			printf STDERR "---------------------------------------------------------------------\n";
+			$failed=1;
+			last;
+		    }
+		}
+	    }
+	    close REGISTER;
+	    $trace and print "Stored mirrors\n";
+	}
+    } else {
+	if ($src->{mode} eq "GRID") {
+	    $sesel++;
+	    $trace and print "|==> replica tried is $sesel out of $maxsesel\n";
+	    if ($sesel<=$maxsesel) {
+		goto trynextreplica;
+	    }
+	}
+	if ($dst->{mode} eq "GRID") {
+	    $writeattempts++;
+	    $trace and print "|==> write attempts $writeattempts out of $maxwriteattempts\n";
+	    if ($writeattempts <= $maxwriteattempts) {
+		goto trynextreplica;
+	    }
+	}
+	printf STDERR "error: ($PROGNAME) copy failed for: $src->{name} => $dst->{name}\n";
+    }
+				     
+
+    
+    ($tmppath ne "") and unlink $tmppath;
+#    ($rsrcpath ne "") and unlink $rsrcpath;
+#    ($rdstpath ne "") and unlink $rdstpath;
+    
+} else {
+    if (!$srcok) {
+	printf STDERR "error: ($PROGNAME) cannot access source: $src->{name}\n";
+	exit (20);
+    }
+    if (!$dstok) {
+	printf STDERR "error: ($PROGNAME) cannot access destination: $dst->{name}\n";
+	exit (21);
+    }
+}
+
+
+if ($failed) {
+    exit(-1);
+} else {
+    # write info file, if -i option is given
+    if ($options{i} ne "") {
+	open INFO, "> $options{i}";
+	if ( -w $options{i} ) {
+	    print INFO "SRC-ARG         : $src->{arg}\n";
+	    print INFO "SRC-NAME        : $src->{name}\n";
+	    print INFO "SRC-PATH        : $src->{path}\n";
+	    print INFO "SRC-PROTOCOL    : $src->{protocol}\n";
+	    print INFO "SRC-SE          : $src->{se}\n";
+	    print INFO "SRC-MODE        : $src->{mode}\n";
+	    print INFO "SRC-MD5         : $src->{md5}\n";
+	    print INFO "DST-ARG         : $dst->{arg}\n";
+            print INFO "DST-NAME        : $dst->{name}\n";
+            print INFO "DST-PATH        : $dst->{path}\n";
+            print INFO "DST-PROTOCOL    : $dst->{protocol}\n";
+            print INFO "DST-SE          : $dst->{se}\n";
+            print INFO "DST-MODE        : $dst->{mode}\n";
+	    print INFO "DST-MD5         : $dst->{md5}\n";
+	    close INFO;
+	}  else {
+	    close INFO;
+	    exit(25);
+	}
+    }
+    exit(0);
+}
+
+sub run_command() {
+
+    my $command = shift;
+    my $result = 1;
+    $trace and print "|==> Trace : $command\n";
+    if (0) {
+	$result = 0;
+	# catching the stdout
+#	select(STDOUT); $| = 1;
+	$|=1;
+	$|=2;
+	open CMD , "$command  |";
+	while (<CMD>) {
+	    if ($_ =~ /^Error/) {
+		$result = 1;
+		print "====> ",$_;
+	    } else {
+		print $_;
+	    }
+	}
+
+	close CMD;
+	return $result;
+    } else {
+	$result = system("$command");
+	if ($result == 32512) {
+	    # the thread cancel error is not problematic, we can ignore it
+	    print STDERR "warning: libgcc_s.so.1 must be installed for pthread_cancel to work\n";
+	    $result = 0;
+	}	
+	return $result;
+    }
+}
+
+sub extract_zipfile() {
+    my $srcname = shift;
+    my $subfile = shift;
+    my $zipname = shift;
+    if ((defined $subfile) && ($subfile ne "")) {
+	$trace and print "|==> Trace : Trying to extract Subfile $1 from $zipname\n";
+	my $tmpdir = "/tmp/.unzip_".rand().time()."__";
+	mkdir $tmpdir;
+	# unzip the file
+	system("$UNZIP $zipname $subfile -d $tmpdir 2>&1 > /dev/null");
+	if ( -e "$tmpdir/$subfile") {
+	    $trace and print "|==> Trace : Extracted $tmpdir/$subfile\n";
+	    system("$MV $tmpdir/$subfile $zipname; $RMDIR $tmpdir");
+	    return 1;
+	} else {
+	    print "error: cannot extract $subfile from $zipname\n";
+	    
+	}
+    }
+    return 0;
+}
+
+sub usage() {
+    print STDERR "usage: $PROGNAME [-s ][-v] [-n] [-d] [-m] [-t <timeout>] <src> <dst>\n";
+    print STDERR "       -v : verbose mode\n";
+    print STDERR "       -n : if the file exist, create a new version of it\n";
+    print STDERR "       -s : silent mode\n";
+    print STDERR "       -d : debug mode\n";
+    print STDERR "       -m : download GRID->LOCAL: verify the catalogue md5 sum with the local file\n";
+    print STDERR "            upload   LOCAL->GRID: compute and store the local md5 sum in the catalogue\n";
+    print STDERR "            gridcopy GRID->GRID : recompute and store the md5 sum in the catalogue\n";
+    print STDERR "       -t <seconds>\n";
+    print STDERR "          : timeout for API service requests [default $APITIMEOUT]\n";
+    print STDERR "            - retry upto 1 week to establish the connection to the file server\n";
+    print STDERR "       -i <infofile>\n";
+    print STDERR "       -o : don't try alternative location's of the file\n";
+    print STDERR "          : write source and destination info into the file <infofile>\n"; 
+    print STDERR "       -h : print the usage information\n";
+}

@@ -1,0 +1,230 @@
+#!/usr/bin/perl
+use Getopt::Std;
+my %options=();
+getopts("chk",\%options);
+@_ = @ARGV;
+
+if ($options{h}) {
+    usage();
+    exit(0);
+}
+
+my $PROGNAME = "alien_edit";
+my $mode = $ENV{'alien_MODE'};
+
+if (!$mode) {
+    $mode = "LOCAL";
+} else {
+    $PROGNAME = "edit";
+}
+
+
+system("mkdir -p /tmp/$UID");
+$ENV{HOME}="/tmp/$UID/";
+
+if ($ENV{LOCALVI} =~ /vi/)  {
+    $VI=$ENV{LOCALVI};
+} else {
+    $VI="vi";
+}
+
+if ($ENV{LOCALVIM} =~ /vim/)  {
+    $VI=$ENV{LOCALVIM};
+} else {
+    $VI="vim";
+}
+
+if ($ENV{LOCALEMACS} =~ /emacs/)  {
+    $EMACS=$ENV{LOCALEMACS};
+} else {
+    $EMACS="emacs";
+}
+
+if ($ENV{LOCALXEMACS} =~ /xemacs/)  {
+    $XEMACS=$ENV{LOCALXEMACS};
+} else {
+    $XEMACS="xemacs";
+}
+
+if ($ENV{LOCALPICO} =~ /pico/)  {
+    $PICO=$ENV{LOCALPICO};
+} else {
+    $PICO="pico";
+}
+
+if ($ENV{LOCALNEDIT} =~ /nedit/)  {
+    $NEDIT=$ENV{LOCALNEDIT};
+} else {
+    $NEDIT="pico";
+}
+
+if ($ENV{LOCALCP} =~ /cp/)  {
+    $CP=$ENV{LOCALCP};
+} else {
+    $CP="cp";
+}
+
+if ($ENV{LOCALMD5SUM} =~ /md5sum/)  {
+    $MD5SUM=$ENV{LOCALMD5SUM};
+} else {
+    $MD5SUM="md5sum";
+}
+
+my $editor = "$VI";
+defined $ENV{'EDITOR'} and ($ENV{'EDITOR'} eq "vim") and $editor = "$VIM";
+defined $ENV{'EDITOR'} and ($ENV{'EDITOR'} eq "emacs") and $editor = "$EMACS";
+defined $ENV{'EDITOR'} and ($ENV{'EDITOR'} eq "emacs -nw") and $editor = "$EMACS -nw";
+defined $ENV{'EDITOR'} and ($ENV{'EDITOR'} eq "xemacs") and $editor = "$XEMACS";
+defined $ENV{'EDITOR'} and ($ENV{'EDITOR'} eq "xemacs -nw") and $editor = "$XEMACS -nw";
+defined $ENV{'EDITOR'} and ($ENV{'EDITOR'} eq "pico") and $editor = "$PICO";
+defined $ENV{'EDITOR'} and ($ENV{'EDITOR'} eq "nedit") and $editor = "$NEDIT";
+
+$src->{path} = shift or usage() and exit -4;
+$src->{name} = $src->{path};
+
+if ($src->{path} =~ /file:/) {
+    $src->{name} =~ s/file\://g;
+    $src->{mode} = "LOCAL";
+    $src->{protocol} = "file:";
+} else {
+    if ($src->{path} =~ /alien:/) {
+        $src->{name} =~ s/alien://g;
+        $src->{mode} = "GRID";
+        $src->{protocol} = "alien:";
+    } else {
+        if ($mode eq "LOCAL") {
+            $src->{name} = $src->{path};
+            $src->{mode} = "LOCAL";
+            $src->{protocol} = "file:";
+
+        } else {
+            if ($mode eq "GRID") {
+                $src->{name} = $src->{path};
+                $src->{mode} = "GRID";
+                $src->{protocol} = "alien:";
+            } else {
+                print "${PROGNAME}: illegal mode set - exit!\n";
+                exit(-6);
+            }
+	}
+    }
+}
+ 
+my $localfile = "/tmp/" . rand() . time() . ".alien_edit";
+my $infofile  = $localfile . ".info";
+if (!$options{c}) {
+    if ($src->{mode} eq "GRID") {
+	$result=system("\$GSHELL_ROOT/bin/alien_cp -i $infofile -s $src->{name} file:$localfile");
+	if ($result) {
+	    print STDERR "error: couldn't get the file $src->{name}\n";
+	    exit (1);
+	}
+    } else {
+	if ( -r $src->{name} ) {
+	    $result=system("$CP $src->{name} $localfile");
+	    if ($result) {
+		print STDERR "error: failed to do a local copy of the file $src->{name}\n";
+		exit (1);
+	    }
+
+	} else {
+	    print STDERR "error: the file $src->{name} is not readable!\n";
+	    exit(1);
+	}
+    }
+    
+    if (! -r $localfile) {
+	print STDERR "error: couldn't read the local copy of the file $src->{name}\n";
+    exit(2);
+    }
+}
+
+my ($md5in,$md5namein);
+if ((-e $localfile)) {
+    ($md5in,$md5namein) = split " ",`$MD5SUM $localfile`;
+    system("$editor $localfile");
+    my ($md5out,$md5nameout) = split " ",`$MD5SUM $localfile`;
+    
+    if ($md5in eq $md5out) {
+	print STDERR "warning: You didn't change the file - original left untouched \n";
+    } else {
+	if ($src->{mode} eq "GRID") {
+	    my ($name, $se) = split ('@',$src->{name},2);
+	    my $newse="";
+	    # read the finfo file, if it exists
+	    if ( -r $infofile ) {
+		open INFO , "$infofile";
+		while (<INFO>) {
+		    chomp $_;
+		    if ($_ =~ /SRC\-SE/) {
+			my $dump;
+			($dump,$newse) = split (':',$_,2);
+			$newse =~ s/ //g; 
+			last;
+		    }
+		}
+		close INFO;
+		if (! unlink $infofile) {
+		    print STDERR "warning: couldn't remove the local copy info file $infofile - remove it yourself\n";
+		}
+	    }
+	    if ($newse ne "") {
+		$src->{name} = $name . "@" . $newse;
+	    }
+	    $result = system("\$GSHELL_ROOT/bin/alien_cp -s -n  file:/$localfile $src->{name}");
+	} else {
+	    $result = system("$CP $localfile $src->{name}");
+	}
+	if ($result) {
+	    print STDERR "error: couldn't write back your edited version of $src->{name} - I leave your edited version under $localfile [ the cp command returned $result\n";
+	    exit (1);
+	}
+    }
+    if ($localfile ne "") { 
+	$result = unlink $localfile;
+	if (!$result) {
+	    print STDERR "error: couln't remove the local copy $localfile - remove it yourself!\n";
+            exit (-10);
+	}
+    }
+    exit 0;
+} else {
+    if (!$exists) {
+	my $localfile = "/tmp/" . rand() . time() . ".alien_edit";
+	system("$editor $localfile");
+            my($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+       $atime,$mtime,$ctime,$blksize,$blocks)
+		= stat($localfile);
+	if ($size > 0) {
+	    if ($src->{mode} eq "GRID") {
+		$result = system("\$GSHELL_ROOT/bin/alien_cp -s file:$localfile $src->{path}");
+	    } else {
+		$result = system("$CP $localfile $src->{name}");
+	    }
+	    if ($result) {
+		print STDERR "error: couldn't write back your edited version of $src->{name} - I leave your edited version under $localfile [ the cp command returned $result\n";
+		exit (1);
+	    }
+	}
+	if ($localfile ne "") {
+	    $result = unlink $localfile;
+	    if (!$result) {
+		print STDERR "error: couln't remove the local copy $localfile - remove it yourself!\n";
+		exit (-10);
+	    }
+	}
+	exit 0;
+    }
+}
+
+sub usage() {
+    print STDERR "usage: $PROGNAME [-n] <filename>\n";
+    print STDERR "       -c : create a new/empty file\n";
+    print STDERR "       env. variable '\$EDITOR' set's the default editor to be used ('vim'/'emacs'/'emacs [-nw]'/'xemacs [-nw]'/'pico')\n";  
+    return 1;
+}
+
+
+return;
+
+

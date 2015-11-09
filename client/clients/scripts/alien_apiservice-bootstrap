@@ -1,0 +1,44 @@
+#!/bin/bash
+touch /tmp/timeformattest.gshell
+timeformat=`ls -la /tmp/timeformattest.gshell | awk '{ print $9 }'`
+
+if [ x$timeformat = "x/tmp/timeformattest.gshell" ]; then
+    filelist=`ls -la | grep "\->" | awk '{print $9}' | grep -v alien_cp | grep -v alien_ps | grep -v alien_submit | grep -v alien_cd | grep -v xrdcpapmon`;
+else 
+    filelist=`ls -la | grep "\->" | awk '{print $8}' | grep -v alien_cp | grep -v alien_ps | grep -v alien_submit | grep -v alien_cd | grep -v xrdcpapmon`;
+fi;
+rm -f /tmp/timeformattest.gshell
+
+for name in $filelist;
+do
+echo "Removing Symlink for $name ..."
+rm $name;
+echo "Creating Symlink for $name ..."
+ln -s $PWD/gbbox $name;
+done
+echo "Removing Symlink for alien_ps ..."
+rm -f alien_ps
+echo "Creating Symlink for alien_ps ..."
+ln -s $PWD/gps alien_ps
+echo "Removing Symlink for alien_submit ..."
+rm -f alien_submit
+echo "Creating Symlink for alien_submit ..."
+ln -s $PWD/gsubmit alien_submit
+
+cd ..
+export GSHELL_ROOT=$PWD
+cd -
+
+echo "Fixing your GSHELL_ROOT ... setting it to $GSHELL_ROOT/"
+cat alien_Shell | grep -v "export GSHELL_ROOT" > .alien_Shell
+cat alien-token-init | grep -v "export GSHELL_ROOT" > .alien-token-init
+
+echo "test -n \$GSHELL_ROOT && export GSHELL_ROOT=$GSHELL_ROOT/" > alien_Shell
+echo "test -n \$GSHELL_ROOT && export GSHELL_ROOT=$GSHELL_ROOT/" > alien-token-init
+cat .alien_Shell >> alien_Shell
+cat .alien-token-init >> alien-token-init
+unlink .alien_Shell
+unlink .alien-token-init
+
+
+ 

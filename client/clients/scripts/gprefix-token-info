@@ -1,0 +1,33 @@
+#!/bin/bash
+! test -r /tmp/gclient_token_$UID && echo "No Token found!";
+! test -r /tmp/gclient_token_$UID && exit 1 
+host=`cat /tmp/gclient_token_$UID|grep -w Host | cut -d "=" -f 2`
+port1=`cat /tmp/gclient_token_$UID|grep -w Port | cut -d "=" -f 2`
+port2=`cat /tmp/gclient_token_$UID|grep -w Port2 | cut -d "=" -f 2`
+user=`cat /tmp/gclient_token_$UID|grep -w User | cut -d "=" -f 2`
+passwd=`cat /tmp/gclient_token_$UID|grep -w Passwd | cut -d "=" -f 2`
+nonce=`cat /tmp/gclient_token_$UID|grep -w Nonce | cut -d "=" -f 2`
+sid=`cat /tmp/gclient_token_$UID|grep -w SID | cut -d "=" -f 2`
+mode=`cat /tmp/gclient_token_$UID|grep -w mode | cut -d "=" -f 2`
+encryptreply=`cat /tmp/gclient_token_$UID|grep -w encryptReply | cut -d "=" -f 2`
+
+echo "Host     : $host"
+echo "Port     : $port1"
+echo "Port2    : $port2"
+echo "User     : $user"
+echo "Pwd      : $passwd"
+echo "Nonce    : \"$nonce\""
+echo "SID      : $sid"
+echo "Encr.Rep.: $encryptreply"
+echo -n "Expires  : " 
+perl -e "print scalar localtime(`cat /tmp/gclient_token_$UID | grep Expiretime | cut -d '=' -f 2`),\"\n\""
+exp=`cat /tmp/gclient_token_$UID | grep Expiretime | cut -d '=' -f 2`
+now=`date +%s`
+if [ $now -gt $exp ]; then
+	echo "Token has expired!"
+	exit 1
+else
+	echo "Token is still valid!"
+	exit 0
+fi
+   

@@ -1,0 +1,139 @@
+if [ ! -e /tmp/gclient_env_$UID ]; then
+	echo "Warning: You don't have an initialized environment - obtain a new token" 
+	exit 1
+fi;
+
+if [ ! -e /tmp/gclient_token_$UID ]; then
+	 echo "Warning: You don't have any token - obtain a token" 
+	exit 1
+fi;
+
+source /tmp/gclient_env_$UID
+if [ x"$GSHELL_NOHIST" != "xyes" ]; then
+	history -c
+	test -e $HOME/.GPREFIXsh_history && history -r $HOME/.GPREFIXsh_history
+	export HISTFILE="$HOME/.GPREFIXsh_history"
+fi;
+
+export GBBOX_ENVFILE="/tmp/gbbox_${UID}_$PPID"
+shopt -s expand_aliases
+export GPREFIX_MODE="GRID"
+export GPREFIX_NOGRID_PATH=$PATH
+localcat=`which cat`
+unalias -a
+alias wc=`which wc 2>/dev/null`
+alias awk=`which awk 2>/dev/null`
+alias sed=`which sed 2>/dev/null`
+alias cut=`which cut 2>/dev/null`
+alias expr=`which expr 2>/dev/null`
+alias clear=`which clear 2>/dev/null`
+alias basename=`which basename 2>/dev/null`
+alias grep=`which grep 2>/dev/null`
+alias debug=`export GCLIENT_DEBUG="$1"` 
+alias test=`which test 2>/dev/null`
+alias uname=`which uname 2>/dev/null`
+alias date=`which date 2>/dev/null`
+alias head=`which head 2>/dev/null`
+alias tail=`which tail 2>/dev/null`
+alias test=`which test 2>/dev/null`
+export LOCALPWD=`pwd`
+export LOCALBASH=`which bash 2>/dev/null`
+export LOCALTCSH=`which tcsh 2>/dev/null`
+export LOCALWHICH=`which which 2>/dev/null`
+export LOCALCAT=`which cat 2>/dev/null`
+export LOCALGREP=`which grep 2>/dev/null`
+export LOCALLS=`which ls 2>/dev/null`
+export LOCALMKDIR=`which mkdir 2>/dev/null`
+export LOCALRMDIR=`which rmdir 2>/dev/null`
+export LOCALMV=`which mv 2>/dev/null`
+export LOCALCP=`which cp 2>/dev/null`
+export LOCALUNZIP=`which unzip 2>/dev/null`
+export LOCALXCP=`which xcp 2>/dev/null`
+export LOCALXRDCP=`which xrdcpapmon 2>/dev/null`
+test -z $LOCALXRDCP && export LOCALXRDCP=`which xrdcp 2>/dev/null`
+export LOCALLESS=`which less 2>/dev/null`
+export LOCALMORE=`which more 2>/dev/null`
+export LOCALEMACS=`which emacs 2>/dev/null`
+export LOCALXEMACS=`which xemacs 2>/dev/null`
+export LOCALVI=`which vi 2>/dev/null`
+export LOCALVIM=`which vim 2>/dev/null`
+export LOCALPICO=`which pico 2>/dev/null`
+export LOCALNEDIT=`which nedit 2>/dev/null`
+export LOCALMD5SUM=`which md5sum 2>/dev/null`
+export LOCALAWK=`which awk 2>/dev/null`
+export LOCALUUIDGEN=`which uuidgen 2>/dev/null`
+export LOCALSTAT=`which stat 2>/dev/null`
+export PATH="/"
+export LOCALHOME=$HOME
+export HOME=$alien_HOME
+unset alien_HOME
+test -e $LOCALHOME/.GPREFIXshrc && source $LOCALHOME/.GPREFIXshrc
+test -z $GSHELL_SILENT && echo " [ GPREFIXsh GSHELL_VERSION (C) ARDA/Alice: Andreas.Joachim.Peters@cern.ch/Derek.Feichtinger@cern.ch] "
+
+source $GSHELL_ROOT/etc/GPREFIX_bash_completion.gShell
+test -z $GSHELL_SILENT && test $GSHELL_COLOR && export PS1="\e[31;47;2maliensh\e[49;34m:[$alien_API_VO] [\#] \e[49;31;4m${alien_PWD} >\e[0m";
+test -z $GSHELL_SILENT && test -z $GSHELL_COLOR && export PS1="aliensh:[$alien_API_VO] [\#] ${alien_PWD} >";
+test  $GSHELL_SILENT && export PS1=""
+alias ps='$GSHELL_ROOT/bin/GPREFIX_ps'
+alias isonline='$GSHELL_ROOT/bin/gisonline'
+alias prepare='$GSHELL_ROOT/bin/gprepare'
+alias stage='$GSHELL_ROOT/bin/gstage'
+alias ls='$GSHELL_ROOT/bin/GPREFIX_ls'
+alias submit='$GSHELL_ROOT/bin/GPREFIX_submit'
+alias kill='$GSHELL_ROOT/bin/GPREFIX_kill'
+alias cd='. $GSHELL_ROOT/bin/GPREFIX_cd dummy'
+alias cp='$GSHELL_ROOT/bin/GPREFIX_cp'
+alias rm='$GSHELL_ROOT/bin/GPREFIX_rm'
+alias rmdir='$GSHELL_ROOT/bin/GPREFIX_rmdir'
+alias mkdir='$GSHELL_ROOT/bin/GPREFIX_mkdir'
+alias connect='$GSHELL_ROOT/bin/GPREFIX_connect'
+alias less='$GSHELL_ROOT/bin/GPREFIX_less'
+alias more='$GSHELL_ROOT/bin/GPREFIX_more'
+alias mv='$GSHELL_ROOT/bin/GPREFIX_mv'
+alias pwd='$GSHELL_ROOT/bin/GPREFIX_pwd -1'
+alias top='$GSHELL_ROOT/bin/GPREFIX_top'
+alias edit='$GSHELL_ROOT/bin/GPREFIX_edit'
+alias cat='$GSHELL_ROOT/bin/GPREFIX_cat'
+alias find='$GSHELL_ROOT/bin/GPREFIX_find'
+alias df='$GSHELL_ROOT/bin/GPREFIX_df'
+alias whereis='$GSHELL_ROOT/bin/GPREFIX_whereis'
+alias resubmit='$GSHELL_ROOT/bin/GPREFIX_resubmit'
+alias mkdir='$GSHELL_ROOT/bin/GPREFIX_mkdir'
+alias rmdir='$GSHELL_ROOT/bin/GPREFIX_rmdir'
+alias erase='$GSHELL_ROOT/bin/GPREFIX_erase'
+alias purge='$GSHELL_ROOT/bin/GPREFIX_purge'
+alias gbbox='$GSHELL_ROOT/bin/gbbox'
+alias whoami='$GSHELL_ROOT/bin/GPREFIX_whoami'
+alias who='$GSHELL_ROOT/bin/GPREFIX_who'
+alias packages='$GSHELL_ROOT/bin/gbbox packman list | grep -v info'
+alias masterjob='$GSHELL_ROOT/bin/gbbox masterJob'
+alias queue='$GSHELL_ROOT/bin/GPREFIX_queue'
+alias run='source $GSHELL_ROOT/bin/GPREFIX_run'
+alias mirror='$GSHELL_ROOT/bin/GPREFIX_mirror'
+alias secure='$GSHELL_ROOT/bin/gbbox option encrypt'
+alias insecure='$GSHELL_ROOT/bin/gbbox option noencrypt'
+alias spy='$GSHELL_ROOT/bin/GPREFIX_spy'
+alias debug='$GSHELL_ROOT/bin/gbbox option remotedebug '
+alias '.!'='$GSHELL_ROOT/bin/gcmd'
+alias addTag='$GSHELL_ROOT/bin/GPREFIX_addTag'
+alias addTagValue='$GSHELL_ROOT/bin/GPREFIX_addTagValue'
+alias addTrigger='$GSHELL_ROOT/bin/GPREFIX_addTrigger'
+alias showTags='$GSHELL_ROOT/bin/GPREFIX_showTags'
+alias showAllTagValue='$GSHELL_ROOT/bin/GPREFIX_showAllTagValue'
+alias showTagValue='$GSHELL_ROOT/bin/GPREFIX_showTagValue'
+alias showTrigger='$GSHELL_ROOT/bin/GPREFIX_showTrigger'
+alias removeTag='$GSHELL_ROOT/bin/GPREFIX_removeTag'
+alias removeTagValue='$GSHELL_ROOT/bin/GPREFIX_removeTagValue'
+alias removeTrigger='$GSHELL_ROOT/bin/GPREFIX_removeTrigger'
+alias updateTagValue='$GSHELL_ROOT/bin/GPREFIX_updateTagValue'
+alias chgroup='$GSHELL_ROOT/bin/GPREFIX_chgroup'
+alias guid2lfn='$GSHELL_ROOT/bin/GPREFIX_guid2lfn'
+alias lfn2guid='$GSHELL_ROOT/bin/GPREFIX_lfn2guid'
+alias partitions='$GSHELL_ROOT/bin/GPREFIX_partitions'
+alias services='$GSHELL_ROOT/bin/GPREFIX_services -n'
+alias registerOutput='$GSHELL_ROOT/bin/GPREFIX_registerOutput'
+
+wdir=''
+test -z `$localcat $GBBOX_ENVFILE 2>/dev/null` || wdir=`$localcat $GBBOX_ENVFILE`
+cd $wdir
+test -z $GSHELL_SILENT && gbbox motd

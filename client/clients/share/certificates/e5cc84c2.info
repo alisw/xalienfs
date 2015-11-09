@@ -1,0 +1,13 @@
+#
+# @(#)$Id: e5cc84c2.info,v 1.4 2009/02/07 01:47:20 pmacvsmh Exp $
+# Information for /DC=EDU/DC=UTEXAS/DC=TACC/O=UT-AUSTIN/CN=TACC Classic CA
+#   
+alias = TACC-Classic
+ca_url = http://www.tacc.utexas.edu/CA/e5cc84c2.0
+crl_url = http://www.tacc.utexas.edu/CA/e5cc84c2.r0
+email = ca@tacc.utexas.edu
+status = accredited:classic
+url = http://www.tacc.utexas.edu/CA/
+requires = TACC-Root
+version = 1.31
+sha1fp.0 = 5B:AE:F7:20:B1:3A:91:4F:1C:FE:8F:AF:5E:ED:48:DB:62:0E:47:65

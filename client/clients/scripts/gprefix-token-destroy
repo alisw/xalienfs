@@ -1,0 +1,6 @@
+#!/bin/bash
+test -f /tmp/gclient_token_$UID ||  echo "Error: no token left to destroy!" 
+test -f /tmp/gclient_token_$UID || exit 100 
+test -f /tmp/gclient_token_$UID && unlink /tmp/gclient_token_$UID
+test -f /tmp/gclient_env_$UID && unlink /tmp/gclient_env_$UID
+exit 0

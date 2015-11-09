@@ -1,0 +1,44 @@
+#!/bin/bash
+touch /tmp/timeformattest.gshell
+timeformat=`ls -la /tmp/timeformattest.gshell | awk '{ print $9 }'`
+
+if [ x$timeformat = "x/tmp/timeformattest.gshell" ]; then
+    filelist=`ls -la | grep "\->" | awk '{print $9}' | grep -v GPREFIX_cp | grep -v GPREFIX_ps | grep -v GPREFIX_submit | grep -v GPREFIX_cd | grep -v xrdcpapmon`;
+else 
+    filelist=`ls -la | grep "\->" | awk '{print $8}' | grep -v GPREFIX_cp | grep -v GPREFIX_ps | grep -v GPREFIX_submit | grep -v GPREFIX_cd | grep -v xrdcpapmon`;
+fi;
+rm -f /tmp/timeformattest.gshell
+
+for name in $filelist;
+do
+echo "Removing Symlink for $name ..."
+rm $name;
+echo "Creating Symlink for $name ..."
+ln -s $PWD/gbbox $name;
+done
+echo "Removing Symlink for GPREFIX_ps ..."
+rm -f GPREFIX_ps
+echo "Creating Symlink for GPREFIX_ps ..."
+ln -s $PWD/gps GPREFIX_ps
+echo "Removing Symlink for GPREFIX_submit ..."
+rm -f GPREFIX_submit
+echo "Creating Symlink for GPREFIX_submit ..."
+ln -s $PWD/gsubmit GPREFIX_submit
+
+cd ..
+export GSHELL_ROOT=$PWD
+cd -
+
+echo "Fixing your GSHELL_ROOT ... setting it to $GSHELL_ROOT/"
+cat GPREFIX_Shell | grep -v "export GSHELL_ROOT" > .GPREFIX_Shell
+cat GPREFIX-token-init | grep -v "export GSHELL_ROOT" > .GPREFIX-token-init
+
+echo "test -n \$GSHELL_ROOT && export GSHELL_ROOT=$GSHELL_ROOT/" > GPREFIX_Shell
+echo "test -n \$GSHELL_ROOT && export GSHELL_ROOT=$GSHELL_ROOT/" > GPREFIX-token-init
+cat .GPREFIX_Shell >> GPREFIX_Shell
+cat .GPREFIX-token-init >> GPREFIX-token-init
+unlink .GPREFIX_Shell
+unlink .GPREFIX-token-init
+
+
+ 

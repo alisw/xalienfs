@@ -1,0 +1,115 @@
+# @(#)policy-igtf-classic.info - IGTF classic authorities
+# Generated Tuesday, 28 Jul, 2009
+version = 1.31
+requires = CNRS2-Grid-FR = 1.31, \
+    AIST = 1.31, \
+    SlovakGrid = 1.31, \
+    BG-ACAD-CA = 1.31, \
+    RDIG = 1.31, \
+    DFN-GridGermany-Root = 1.31, \
+    BalticGrid = 1.31, \
+    SwissSign-Silver = 1.31, \
+    REUNA-ca = 1.31, \
+    SRCE = 1.31, \
+    HKU = 1.31, \
+    DOEGrids = 1.31, \
+    IRAN-GRID = 1.31, \
+    ASGCCA-2007 = 1.31, \
+    MD-Grid = 1.31, \
+    UNAMgrid-ca = 1.31, \
+    SWITCHgrid-Root = 1.31, \
+    BrGrid = 1.31, \
+    PK-Grid-2007 = 1.31, \
+    SwissSign-Bronze = 1.31, \
+    RMKI = 1.31, \
+    NECTEC = 1.31, \
+    SWITCH-Personal-2007 = 1.31, \
+    CNRS = 1.31, \
+    UKeScienceCA-2007 = 1.31, \
+    TACC-Classic = 1.31, \
+    LIPCA = 1.31, \
+    SDG = 1.31, \
+    CNRS2-Projets = 1.31, \
+    SWITCH-Server-2007 = 1.31, \
+    NIIF = 1.31, \
+    MaGrid = 1.31, \
+    KISTI-2007 = 1.31, \
+    CERN-TCA = 1.31, \
+    IUCC = 1.31, \
+    INFN-CA-2006 = 1.31, \
+    ArmeSFo = 1.31, \
+    HellasGrid-Root = 1.31, \
+    SiGNET-CA = 1.31, \
+    IHEP = 1.31, \
+    pkIRISGrid = 1.31, \
+    CNRS2 = 1.31, \
+    CNRS-Grid-FR = 1.31, \
+    CALG = 1.31, \
+    MREN-CA = 1.31, \
+    HellasGrid-CA-2006 = 1.31, \
+    BYGCA = 1.31, \
+    CNIC = 1.31, \
+    ULAGrid-CA-2008 = 1.31, \
+    KEK = 1.31, \
+    AustrianGrid = 1.31, \
+    MARGI = 1.31, \
+    NGO-Netrust = 1.31, \
+    NAREGI = 1.31, \
+    LACGridCA = 1.31, \
+    BEGrid2008 = 1.31, \
+    APAC = 1.31, \
+    PRAGMA-UCSD = 1.31, \
+    QuoVadis-Root-CA1 = 1.31, \
+    SWITCH = 1.31, \
+    GermanGrid = 1.31, \
+    NorduGrid = 1.31, \
+    CESNET = 1.31, \
+    NCHC = 1.31, \
+    ESnet = 1.31, \
+    CyGrid = 1.31, \
+    AEGIS = 1.31, \
+    NIKHEF = 1.31, \
+    UNLPGrid = 1.31, \
+    SWITCH-QuoVadis-Grid-ICA = 1.31, \
+    TACC-Root = 1.31, \
+    IGCA = 1.31, \
+    Grid-Ireland = 1.31, \
+    CERN-Root = 1.31, \
+    GridCanada = 1.31, \
+    UGRID = 1.31, \
+    PolishGrid = 1.31, \
+    SEE-GRID = 1.31, \
+    RomanianGRID = 1.31, \
+    UKeScienceRoot-2007 = 1.31, \
+    SwissSign-Root = 1.31, \
+    TRGrid = 1.31, \
+    CNRS-Projets = 1.31
+obsoletes = CyGrid-old, \
+    CNRS-DataGrid, \
+    CESNET-old, \
+    SwissSign-Silver-Root, \
+    SWITCH-Personal2, \
+    SWITCH-CA2, \
+    SWITCH-Server2, \
+    KISTI, \
+    Russia, \
+    SWITCH-Server, \
+    SWITCH-Personal, \
+    LIP, \
+    GridCanada-old, \
+    UKeScience, \
+    HellasGrid, \
+    INFN, \
+    Spain, \
+    SiGNET, \
+    CERN, \
+    SWITCH-Personal-2006, \
+    SWITCH-Server-2006, \
+    ASGCCA, \
+    UKeScienceRoot, \
+    UKeScienceCA, \
+    PK-Grid, \
+    EstonianGrid, \
+    DFN-GridGermany-User, \
+    DFN-GridGermany-Server, \
+    BEGrid

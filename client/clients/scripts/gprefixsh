@@ -1,0 +1,65 @@
+#!/bin/bash
+if [ ! -e /tmp/gclient_env_$UID ]; then
+        echo "Warning: You don't have an initialized environment - obtain a new token"
+        exit -1
+fi;
+
+if [ ! -e /tmp/gclient_token_$UID ]; then
+         echo "Warning: You don't have any token - obtain a token"
+        exit -1
+fi;
+
+# load the readline configuration
+export INPUTRC=$GSHELL_ROOT/etc/GPREFIX_inputrc
+#source /tmp/gclient_env_$UID
+`cat /tmp/gclient_env_$UID | grep GSHELL_ROOT`
+if [ x$1 != "x" ]; then
+    if [ "x$1" == "x-c" ]; then
+        ###########################
+	# this we take as a command
+	shift;
+        export GSHELL_SILENT=1
+        exec bash --rcfile $GSHELL_ROOT/bin/GPREFIX_Shell -i -f -c "$*"
+	exit $?
+    else 
+        echo $1 | grep ^file\: 2>&1 >/dev/null;
+        if [ $? -eq 0 ]; then
+	    ##########################
+	    # this is a local script file
+	    export GPREFIX_script=`echo $1 | sed s/file\://`;	
+	    if [ -r $GPREFIX_script ]; then
+                # this is a script file
+		export GSHELL_SILENT=1
+		export GSHELL_NOHIST="yes";
+		shift;
+		exec bash --rcfile $GSHELL_ROOT/bin/GPREFIX_Shell -i -f -s $* < $GPREFIX_script 
+            else
+		# this is a not existing script file
+		echo "Error: file $GPREFIX_script does not exist";
+		exit -20;
+	    fi
+	else
+	# this we take as a GRID script file
+	    ##########################
+	    export GPREFIX_script="/tmp/.GPREFIXsh.$RANDOM.$RANDOM";
+	    # we have to do like this, there is a problem, when we recursively call the same shell - we get a SIGSTOP somewhere
+	    ( source /tmp/gclient_env_$UID; $GSHELL_ROOT/bin/GPREFIX_cp alien:$1 file:$GPREFIX_script 2&>1 >/dev/null )
+
+	    if [ $? -eq 0 ]; then
+		# we can execute this script now like a local file
+		export GSHELL_SILENT=1
+		export GSHELL_NOHIST=1
+		shift;
+                exec bash --rcfile $GSHELL_ROOT/bin/GPREFIX_Shell -i -f -s $* < $GPREFIX_script 
+	    else
+		# we couldn't get this script from the GRID
+		echo "Error: file $1 could not be downloaded";
+		exit -21;
+	    fi
+        fi;
+    fi;
+else
+    exec bash --rcfile $GSHELL_ROOT/bin/GPREFIX_Shell -f
+fi
+
+exec bash --rcfile $GSHELL_ROOT/bin/GPREFIX_Shell -f

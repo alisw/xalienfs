@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<service name="gapiservice">
+  <components>
+    <component name="gapiservice">
+      <config>
+        <param name="prefork">              <value>16</value></param>
+        <param name="port">                 <value>10000</value></param>
+        <param name="user">                 <value>"aliprod"</value></param>
+        <param name="role">                 <value>"admin"</value></param>
+        <param name="debug">                <value>0</value></param>
+        <param name="commandlogging">       <value>1</value></param>
+        <param name="commandlogfile">       <value>HOME/log/ApiCommands.log</value></param>
+        <param name="performancelogging">   <value>0</value></param>
+        <param name="filteredcommands">
+           <arrayvalue>"get"</arrayvalue>
+           <arrayvalue>"add"</arrayvalue>
+           <arrayvalue>"quit"</arrayvalue>
+           <arrayvalue>"exit"</arrayvalue>
+           <arrayvalue>"user"</arrayvalue>
+        </param>
+        <param name="environment">
+           <arrayvalue>SEALED_ENVELOPE_LOCAL_PRIVATE_KEY="HOME/.alien/gapiserver/lpriv.pem"</arrayvalue>
+           <arrayvalue>SEALED_ENVELOPE_LOCAL_PUBLIC_KEY="HOME/.alien/gapiserver/lpub.pem"</arrayvalue>
+           <arrayvalue>SEALED_ENVELOPE_REMOTE_PRIVATE_KEY="HOME/.alien/gapiserver/rpriv.pem"</arrayvalue>
+           <arrayvalue>SEALED_ENVELOPE_REMOTE_PUBLIC_KEY="HOME/.alien/gapiserver/rpub.pem"</arrayvalue>
+        </param>
+      </config>
+    </component>
+  </components>
+</service>

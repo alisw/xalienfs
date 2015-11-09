@@ -1,0 +1,4 @@
+# @(#)$Id: eebc7717.signing_policy,v 1.5 2007/11/06 16:14:21 pmacvsdg Exp $
+access_id_CA   X509    '/C=CH/O=Switch - Teleinformatikdienste fuer Lehre und Forschung/CN=SWITCH Server CA'
+pos_rights     globus  CA:sign
+cond_subjects  globus  '"/C=CH/*"'

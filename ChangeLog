@@ -1,0 +1,2 @@
+1.0.14o Tue Sep 18 10:51:55 CEST 2012 
+- update linking to build against xrootd 3.2.4, -lXrdSys -lXrdOuc -lXrdNet compressed into -lXrdUtils
