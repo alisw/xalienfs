@@ -1,10 +1,11 @@
+#include <XrdOss/XrdOss.hh>
 //          $Id: XrdxAlienFs.cc,v 1.16 2007/10/04 01:34:19 ajp Exp $
 
 const char *XrdxAlienFsCVSID = "$Id: XrdxAlienFs.cc,v 2.0.0 2007/10/04 01:34:19 ajp Exp $";
 
 
 #include "XrdVersion.hh"
-#include "XrdNet/XrdNetDNS.hh"
+#include "XrdSys/XrdSysDNS.hh"
 #include "XrdOuc/XrdOucEnv.hh"
 #include "XrdOuc/XrdOucTokenizer.hh"
 #include "XrdOuc/XrdOucTrace.hh"
@@ -849,8 +850,8 @@ XrdxAlienFs::FSctl(const int               cmd,
       auth->MarkAccess(mysid);
       // set the IP address in the SHM authentication map
       struct sockaddr InetAddr;
-      if (XrdNetDNS::getHostAddr(client->host, InetAddr)) {
-	auth->SetIp(mysid, htonl(XrdNetDNS::IPAddr(&InetAddr)));
+      if (XrdSysDNS::getHostAddr(client->host, InetAddr)) {
+	auth->SetIp(mysid, htonl(XrdSysDNS::IPAddr(&InetAddr)));
       } else {
 	auth->SetIp(mysid,0);
       }

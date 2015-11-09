@@ -70,7 +70,7 @@ public:
   
   const   char       *FName() {return (const char *)fname;}
   
-  XrdxAlienFsDirectory(char *user=0) : XrdOfsDirectory(user)
+  XrdxAlienFsDirectory(char *user=0) : XrdOfsDirectory(user, 0)
   {ateof = 0; fname = 0;
   dh    = (DIR *)0;
   d_pnt = &dirent_full.d_entry;
@@ -149,7 +149,7 @@ public:
 
   gapi_envhash_t* getEnvHash(char* decodedstr);
   
-  XrdxAlienFsFile(char *user=0) : XrdOfsFile(user)
+  XrdxAlienFsFile(char *user=0) : XrdOfsFile(user, 0)
   {fname = "";executed=false;}
   ~XrdxAlienFsFile() { close();}
 private:
