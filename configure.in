@@ -161,7 +161,7 @@ AC_SUBST(PERL)
 
 # get the correct library options and link flags for perl
 AC_MSG_CHECKING([perl libraries and link options])
-perlbuf=`${PERL} -MExtUtils::Embed -e ldopts`
+perlbuf=`${PERL} -MExtUtils::Embed -e ldopts | sed -e 's/-arch @<:@^ @:>@*//g'`
 if test x"$perlbuf" = x
 then
   AC_MSG_ERROR([no result from ${PERL} -MExtUtils::Embed -e ldopts])
@@ -186,7 +186,7 @@ do
 done
 AC_MSG_NOTICE([perlembed libraries to link: $PERL_LIBS])
 AC_MSG_NOTICE([perlembed link flags: $PERL_LDOPTS])
-PERL_CCOPTS=`${PERL} -MExtUtils::Embed -e ccopts`
+PERL_CCOPTS=`${PERL} -MExtUtils::Embed -e ccopts | sed -e 's/-arch @<:@^ @:>@*//g'`
 AC_MSG_NOTICE([perlembed cc options: $PERL_CCOPTS])
 AC_SUBST(PERL_LIBS)
 AC_SUBST(PERL_LDOPTS)
