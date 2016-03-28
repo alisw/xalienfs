@@ -13,7 +13,8 @@ extern "C" {
 #  error mode(32t) must be an unsigned 32-bit type (see the header file)
 #endif
 
-#if defined(ULONG_LONG_MAX) && ULONG_LONG_MAX == 18446744073709551615ull
+#if (defined(ULONG_LONG_MAX) && ULONG_LONG_MAX == 18446744073709551615ull) || \
+    (defined(ULLONG_MAX) && ULLONG_MAX == 18446744073709551615ull)
   typedef unsigned long long uint64;
 #else
 #  error mode(64t) must be an unsigned 64-bit type (see the header file)
