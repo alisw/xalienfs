@@ -259,7 +259,7 @@ int gapi_mkdir(const char *pathname, mode_t mode)
   
   command1 << name;
 
-  DEBUGMSG(3, << "Sending command: >" << command1 << "<" << std::endl);
+  DEBUGMSG(3, << "Sending command: >" << command1.str() << "<" << std::endl);
 
   if(executeRemoteCommand(gc, command1.str())){
     if (!nodelete)delete gc;
@@ -276,7 +276,7 @@ int gapi_mkdir(const char *pathname, mode_t mode)
   command2 << std::ios::oct << mode;
   command2 << " " << name;
 
-  DEBUGMSG(3, << "Sending command: >" << command2 << "<" << std::endl);
+  DEBUGMSG(3, << "Sending command: >" << command2.str() << "<" << std::endl);
 
   if(executeRemoteCommand(gc, command2.str())){
     if (!nodelete)delete gc;

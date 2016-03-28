@@ -737,7 +737,7 @@ int gapi_chmod(const char *pathname, mode_t mode)
   command << std::ios::oct << mode;
   command << " " << name;
 
-  DEBUGMSG(3, << "Sending command: >" << command << "<" << std::endl);
+  DEBUGMSG(3, << "Sending command: >" << command.str() << "<" << std::endl);
 
   if(executeRemoteCommand(gc, command.str())){
     if (!nodelete)delete gc;
@@ -779,7 +779,7 @@ int gapi_rename(const char *oldpath, const char *newpath) {
   command << "mv ";
   command << oldname << " " << newname;
 
-  DEBUGMSG(3, << "Sending command: >" << command << "<" << std::endl);
+  DEBUGMSG(3, << "Sending command: >" << command.str() << "<" << std::endl);
 
   if(executeRemoteCommand(gc, command.str())){
     if (!nodelete)delete gc;
@@ -830,7 +830,7 @@ int gapi_find(const char *path, const char *pattern, int maxresult=1000) {
 
   command << newpath << " " << pattern;
 
-  DEBUGMSG(3, << "Sending command: >" << command << "<" << std::endl);
+  DEBUGMSG(3, << "Sending command: >" << command.str() << "<" << std::endl);
 
   if(executeRemoteCommand(gc, command.str())){
     if (!nodelete)delete gc;
