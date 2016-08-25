@@ -12,14 +12,14 @@
 #ifndef __CODEC_H
 #define __CODEC_H
 #define MAXSTREAM 4
-#define MAXCOLUMN 1024*64
+#define MAXCOLUMN 2*1024*64
 #define DEFAULTCOLUMN 1024
 #ifndef CODEC_CXX
 extern int ncolumn;
 extern int nfield;
 #endif
 
-#define MAXFIELD  128
+#define MAXFIELD  512
 #define DEFAULTFIELD 16
 
 #define MAXBUFFER 1024*1024*512
