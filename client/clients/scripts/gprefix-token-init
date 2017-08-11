@@ -1,6 +1,18 @@
 #!/bin/bash
 # if not sourced
- 
+
+type openssl &> /dev/null
+while [[ $? == 0 ]]; do
+  USERCERT=$HOME/.globus/usercert.pem
+  WARN="\033[41m\033[37m"
+  END="\033[m\n"
+  [[ -r "$USERCERT" ]] || { printf "${WARN}Cannot find user certificate in $USERCERT!${END}"; break; }
+  openssl x509 -in "$USERCERT" -noout -checkend 0 &> /dev/null || { printf "${WARN}Your certificate $USERCERT has expired!${END}"; break; }
+  openssl x509 -in "$USERCERT" -noout -checkend 604800 &> /dev/null || { printf "${WARN}Your certificate $USERCERT will expire in less than one week!${END}"; break; }
+  break
+done
+unset USERCERT WARN END
+
 #############################################################################################
 # guess the platform 
 for dir in /usr/share/libtool /usr/share/automake /usr/lib/rpm
