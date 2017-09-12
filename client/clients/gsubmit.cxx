@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     exit(-1);
   } else {
     if (colourout) {
-      fprintf(stdout,"submit: Your new job ID is %s%s%d%s%s \n",gs_textbold.c_str(),gs_textblue.c_str(),(int)jobid,gs_textunbold.c_str(),gs_textblack.c_str());
+      fprintf(stdout,"submit: Your new job ID is %s%s%d%s%s \n",gs_textbold.c_str(),gs_textblue.c_str(),(int)jobid,gs_textblack.c_str(),gs_textunbold.c_str());
     } else {
       fprintf(stdout,"submit: Your new job ID is %d \n",(int)jobid);
     }
