@@ -1299,7 +1299,7 @@ gclient::readTags(int column, std::map<std::string, std::string> &tags) const
 */
 int 
 gclient::GetStreamColumns(int stream) const {
-  return (codec>0)?codec->GetStreamColumns(stream):-1;
+  return (codec != 0)?codec->GetStreamColumns(stream):-1;
 }
 
 /** Returns the number of rows in the result stream for a column.
@@ -1309,7 +1309,7 @@ gclient::GetStreamColumns(int stream) const {
 */
 int 
 gclient::GetStreamRows(int stream, int column) const {
-  return (codec>0)?codec->GetStreamField(stream,column, TBytestreamCODEC::kFieldvalue):-1;
+  return (codec != 0)?codec->GetStreamField(stream,column, TBytestreamCODEC::kFieldvalue):-1;
 }
 
 /** Returns the a field value in stream specified by row and column
@@ -1320,12 +1320,12 @@ gclient::GetStreamRows(int stream, int column) const {
 */
 char* 
 gclient::GetStreamFieldValue(int stream, int row, int column) {
-  return (codec>0)?(char*)codec->GetFieldValue(stream,row,column):NULL;
+  return (codec != 0)?(char*)codec->GetFieldValue(stream,row,column):NULL;
 }
 
 char*
 gclient::GetStreamFieldKey(int stream, int row, int column) {
-  return (codec>0)?(char*)codec->GetFieldName(stream,row,column):NULL;
+  return (codec != 0)?(char*)codec->GetFieldName(stream,row,column):NULL;
 }
 
 /**

@@ -67,7 +67,7 @@ struct TSharedAuthentication::StAuthblock* TSharedAuthentication::ReadBlock(unsi
  
  
 TSharedAuthentication::~TSharedAuthentication() {
-    if (fAuthblock>0) {
+    if (fAuthblock != 0) {
 	munmap(fAuthblock,MAXAUTHENTICATION*sizeof(struct StAuthblock));
     }
 }
